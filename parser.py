@@ -15,6 +15,7 @@ Docs:
   https://docs.polymarket.com/api-reference/pricing/get-price-history-for-a-traded-token
 """
 
+import argparse
 import csv
 import json
 import time
@@ -375,7 +376,27 @@ def append_rows_csv(path: str, rows: List[List[Any]]) -> None:
         csv.writer(f).writerows(rows)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Download Polymarket price history with labels.")
+    parser.add_argument("--output", default=OUTPUT_FILE, help="CSV output file.")
+    parser.add_argument("--errors", default=ERROR_LOG, help="Error log file.")
+    parser.add_argument("--history-days", type=int, default=HISTORY_DAYS)
+    parser.add_argument("--min-volume", type=float, default=MIN_VOLUME_NUM)
+    parser.add_argument("--scan-limit", type=int, default=SCAN_LIMIT_MARKETS)
+    parser.add_argument("--page-size", type=int, default=PAGE_SIZE)
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    global OUTPUT_FILE, ERROR_LOG, HISTORY_DAYS, MIN_VOLUME_NUM, SCAN_LIMIT_MARKETS, PAGE_SIZE
+    OUTPUT_FILE = args.output
+    ERROR_LOG = args.errors
+    HISTORY_DAYS = args.history_days
+    MIN_VOLUME_NUM = args.min_volume
+    SCAN_LIMIT_MARKETS = args.scan_limit
+    PAGE_SIZE = args.page_size
+
     session = make_session()
 
     markets = fetch_resolved_markets(session)
