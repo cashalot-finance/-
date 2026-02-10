@@ -347,7 +347,9 @@ def fetch_prices_history_365d_chunked(
     return out
 
 
-def init_csv(path: str) -> None:
+def init_csv(path: str, append: bool) -> None:
+    if append:
+        return
     header = [
         "market_id",
         "question",
@@ -384,6 +386,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-volume", type=float, default=MIN_VOLUME_NUM)
     parser.add_argument("--scan-limit", type=int, default=SCAN_LIMIT_MARKETS)
     parser.add_argument("--page-size", type=int, default=PAGE_SIZE)
+    parser.add_argument("--resume", action="store_true", help="Append to existing CSV if it exists.")
     return parser.parse_args()
 
 
@@ -408,7 +411,7 @@ def main() -> None:
     print(f"[INFO] Total token_ids to fetch: {total_tokens}")
     print(f"[INFO] History window: last {HISTORY_DAYS} days before each market endDate")
 
-    init_csv(OUTPUT_FILE)
+    init_csv(OUTPUT_FILE, append=args.resume)
     print("[INFO] Downloading prices-history for tokens ...")
 
     req_i = 0

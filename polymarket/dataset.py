@@ -6,7 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 
-from polymarket.calculations import estimate_slippage, risk_score
+from polymarket.calculations import daily_return, estimate_slippage, risk_score
 from polymarket.config import DataConfig
 
 
@@ -99,6 +99,15 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     daily["risk_score"] = daily.apply(
         lambda r: risk_score(float(r["price"]), int(r["days_to_expiry"])), axis=1
     )
+    daily["expected_return"] = daily.apply(
+        lambda r: daily_return(
+            float(r["price"]),
+            float(r["next_price"]),
+            config.fee_rate,
+            float(r["slippage"]),
+        ),
+        axis=1,
+    )
 
     samples: List[DailySample] = []
     obs_rows: List[np.ndarray] = []
@@ -137,6 +146,31 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
         )
 
     return DailyDataset(samples), np.vstack(obs_rows)
+
+
+def build_daily_frame(config: DataConfig) -> pd.DataFrame:
+    dataset, _ = load_daily_dataset(config)
+    if not dataset.samples:
+        return pd.DataFrame()
+    records = []
+    for sample in dataset.samples:
+        records.append(
+            {
+                "market_id": sample.market_id,
+                "token_id": sample.token_id,
+                "question": sample.question,
+                "day_index": sample.day_index,
+                "days_to_expiry": sample.days_to_expiry,
+                "price": sample.price,
+                "next_price": sample.next_price,
+                "volume_num": sample.volume_num,
+                "n_outcomes": sample.n_outcomes,
+                "rank_by_price": sample.rank_by_price,
+                "slippage": sample.slippage,
+                "risk_score": sample.risk_score,
+            }
+        )
+    return pd.DataFrame(records)
 
 
 def compute_reward(sample: DailySample, config: DataConfig) -> float:

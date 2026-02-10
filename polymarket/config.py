@@ -13,6 +13,9 @@ class DataConfig:
     max_price: float = 0.999
     fee_rate: float = 0.0015
     risk_weight: float = 0.6
+    min_expected_return: float = 0.002
+    max_risk_score: float = 0.25
+    max_positions_per_day: int = 3
 
 
 @dataclass(frozen=True)

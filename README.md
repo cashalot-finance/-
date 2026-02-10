@@ -9,6 +9,7 @@
 - `polymarket/train.py` — обучение PPO.
 - `polymarket/infer.py` — ранжирование возможностей по обученной модели.
 - `polymarket/calculator.py` — калькулятор доходности/риска для быстрой проверки гипотез.
+- `polymarket/backtest.py` — простой бэктест стратегии (фильтр по доходности/риску).
 
 ## Установка
 ```bash
@@ -33,6 +34,11 @@ python -m polymarket.infer --csv polymarket_labeled_timeseries.csv --model model
 ## Калькулятор
 ```bash
 python -m polymarket.calculator --price-now 0.97 --price-next 0.99 --volume 50000 --days 1
+```
+
+## Бэктест
+```bash
+python -m polymarket.backtest --csv polymarket_labeled_timeseries.csv --min-expected-return 0.002 --max-risk-score 0.25
 ```
 
 ## Логика отбора

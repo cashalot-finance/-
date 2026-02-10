@@ -1,1 +1,1 @@
-__all__ = ["config", "dataset", "env", "calculations", "calculator"]
+__all__ = ["config", "dataset", "env", "calculations", "calculator", "backtest"]
