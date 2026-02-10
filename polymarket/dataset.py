@@ -26,6 +26,7 @@ class DailySample:
     slippage: float
     risk_score: float
     liquidity_score: float
+    volatility: float
 
 
 class DailyDataset:
@@ -62,7 +63,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     ]
 
     if df.empty:
-        return DailyDataset([]), np.zeros((0, 8), dtype=np.float32)
+        return DailyDataset([]), np.zeros((0, 9), dtype=np.float32)
 
     daily = (
         df.groupby(["market_id", "token_id", "day_index"])\
@@ -104,6 +105,12 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
         axis=1,
     )
     daily["liquidity_score"] = daily["volume_num"].apply(liquidity_score)
+    daily["volatility"] = (
+        daily.groupby(["market_id", "token_id"])["price"]
+        .apply(lambda s: s.pct_change().rolling(3).std())
+        .reset_index(level=[0, 1], drop=True)
+        .fillna(0.0)
+    )
 
     daily = daily[
         (daily["expected_return"] >= config.min_expected_return)
@@ -111,7 +118,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     ]
 
     if daily.empty:
-        return DailyDataset([]), np.zeros((0, 8), dtype=np.float32)
+        return DailyDataset([]), np.zeros((0, 9), dtype=np.float32)
 
     samples: List[DailySample] = []
     obs_rows: List[np.ndarray] = []
@@ -133,6 +140,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                 slippage=float(row["slippage"]),
                 risk_score=float(row["risk_score"]),
                 liquidity_score=float(row["liquidity_score"]),
+                volatility=float(row["volatility"]),
             )
         )
         obs_rows.append(
@@ -146,6 +154,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                     float(row["slippage"]),
                     float(row["risk_score"]),
                     float(row["liquidity_score"]),
+                    float(row["volatility"]),
                 ],
                 dtype=np.float32,
             )
@@ -175,6 +184,7 @@ def build_daily_frame(config: DataConfig) -> pd.DataFrame:
                 "slippage": sample.slippage,
                 "risk_score": sample.risk_score,
                 "liquidity_score": sample.liquidity_score,
+                "volatility": sample.volatility,
             }
         )
     return pd.DataFrame(records)

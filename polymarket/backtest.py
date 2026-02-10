@@ -50,6 +50,8 @@ def backtest(config: DataConfig) -> BacktestResult:
     )
     if "liquidity_score" not in df.columns:
         df["liquidity_score"] = 0.0
+    if "volatility" not in df.columns:
+        df["volatility"] = 0.0
 
     df = df[
         (df["expected_return"] >= config.min_expected_return)

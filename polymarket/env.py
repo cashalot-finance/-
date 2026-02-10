@@ -23,10 +23,10 @@ class PolymarketDailyEnv(gym.Env):
         self.current_day = None
         self.positions_today = 0
 
-        # Observation: price, days_to_expiry, volume, n_outcomes, rank, slippage, risk, liquidity, balance
+        # Observation: price, days_to_expiry, volume, n_outcomes, rank, slippage, risk, liquidity, volatility, balance
         self.observation_space = gym.spaces.Box(
-            low=np.array([0, 0, 0, 2, 1, 0, 0, 0, 0], dtype=np.float32),
-            high=np.array([1, 30, 1e9, 50, 10, 0.2, 1, 1, 1000], dtype=np.float32),
+            low=np.array([0, 0, 0, 2, 1, 0, 0, 0, 0, 0], dtype=np.float32),
+            high=np.array([1, 30, 1e9, 50, 10, 0.2, 1, 1, 1, 1000], dtype=np.float32),
         )
 
         # Action: 0 = skip, 1 = buy
@@ -44,6 +44,7 @@ class PolymarketDailyEnv(gym.Env):
                 float(sample.slippage),
                 float(sample.risk_score),
                 float(sample.liquidity_score),
+                float(sample.volatility),
                 float(self.balance),
             ],
             dtype=np.float32,

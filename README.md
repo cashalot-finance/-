@@ -11,6 +11,7 @@
 - `polymarket/calculator.py` — калькулятор доходности/риска для быстрой проверки гипотез.
 - `polymarket/backtest.py` — простой бэктест стратегии (фильтр по доходности/риску).
 - `polymarket/execution.py` — утилиты для расчёта средней цены исполнения по стакану.
+- `polymarket/metrics.py` — отчёт по качеству датасета и статистикам.
 
 ## Установка
 ```bash
@@ -40,6 +41,11 @@ python -m polymarket.calculator --price-now 0.97 --price-next 0.99 --volume 5000
 ## Бэктест
 ```bash
 python -m polymarket.backtest --csv polymarket_labeled_timeseries.csv --min-expected-return 0.002 --max-risk-score 0.25
+```
+
+## Метрики датасета
+```bash
+python -m polymarket.metrics --csv polymarket_labeled_timeseries.csv
 ```
 
 ## Логика отбора
