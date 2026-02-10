@@ -38,12 +38,6 @@ class DailyDataset:
         return self.samples[idx]
 
 
-def _slippage_from_volume(volume_num: float, cap: float) -> float:
-    if volume_num <= 0:
-        return cap
-    return min(cap, 1.0 / (1.0 + np.log1p(volume_num)))
-
-
 def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     df = pd.read_csv(config.csv_path)
 
@@ -84,7 +78,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
 
     daily["days_to_expiry"] = daily["day_index"]
 
-    daily = daily.sort_values(["market_id", "token_id", "day_index"])
+    daily = daily.sort_values(["day_index", "market_id", "token_id"])
     daily["next_price"] = daily.groupby(["market_id", "token_id"])["price"].shift(-1)
     daily = daily.dropna(subset=["next_price"])
 
@@ -108,6 +102,14 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
         ),
         axis=1,
     )
+
+    daily = daily[
+        (daily["expected_return"] >= config.min_expected_return)
+        & (daily["risk_score"] <= config.max_risk_score)
+    ]
+
+    if daily.empty:
+        return DailyDataset([]), np.zeros((0, 7), dtype=np.float32)
 
     samples: List[DailySample] = []
     obs_rows: List[np.ndarray] = []

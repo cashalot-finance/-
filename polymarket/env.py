@@ -19,6 +19,8 @@ class PolymarketDailyEnv(gym.Env):
         self.index = 0
         self.initial_balance = initial_balance
         self.balance = initial_balance
+        self.current_day = None
+        self.positions_today = 0
 
         # Observation: price, days_to_expiry, volume, n_outcomes, rank, slippage, risk, balance
         self.observation_space = gym.spaces.Box(
@@ -49,6 +51,8 @@ class PolymarketDailyEnv(gym.Env):
         super().reset(seed=seed)
         self.index = 0
         self.balance = self.initial_balance
+        self.current_day = None
+        self.positions_today = 0
         if len(self.dataset) == 0:
             return np.zeros(self.observation_space.shape, dtype=np.float32), {}
         return self._get_obs(), {}
@@ -59,11 +63,19 @@ class PolymarketDailyEnv(gym.Env):
             return obs, 0.0, True, False, {}
 
         sample = self.dataset[self.index]
-        reward = 0.0
+        if self.current_day is None or sample.day_index != self.current_day:
+            self.current_day = sample.day_index
+            self.positions_today = 0
+
+        reward = self.config.skip_penalty
         if action == 1:
-            daily_reward = compute_reward(sample, self.config)
-            self.balance *= max(1.0 + daily_reward, 0.0)
-            reward = daily_reward
+            if self.positions_today >= self.config.max_positions_per_day:
+                reward = self.config.overtrade_penalty
+            else:
+                daily_reward = compute_reward(sample, self.config)
+                self.balance *= max(1.0 + daily_reward, 0.0)
+                reward = daily_reward
+                self.positions_today += 1
 
         self.index += 1
         terminated = self.index >= len(self.dataset)

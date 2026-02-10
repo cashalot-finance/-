@@ -16,6 +16,8 @@ class DataConfig:
     min_expected_return: float = 0.002
     max_risk_score: float = 0.25
     max_positions_per_day: int = 3
+    skip_penalty: float = 0.0
+    overtrade_penalty: float = -0.01
 
 
 @dataclass(frozen=True)
