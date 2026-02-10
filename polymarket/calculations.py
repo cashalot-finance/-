@@ -47,6 +47,16 @@ def reward_from_return(ret: float, risk: float, risk_weight: float) -> float:
     return float(np.log1p(safe_ret) - risk_weight * risk)
 
 
+def liquidity_score(volume_num: float) -> float:
+    if volume_num <= 0:
+        return 0.0
+    return float(min(1.0, np.log1p(volume_num) / 12.0))
+
+
+def position_fraction(liquidity: float, max_fraction: float) -> float:
+    return float(min(max_fraction, max(0.0, liquidity)))
+
+
 def target_sell_price(price_now: float, desired_return: float) -> float:
     return float(price_now * (1.0 + desired_return))
 

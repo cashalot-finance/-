@@ -5,8 +5,9 @@ from typing import Tuple
 import gymnasium as gym
 import numpy as np
 
+from polymarket.calculations import daily_return, position_fraction, reward_from_return
 from polymarket.config import DataConfig
-from polymarket.dataset import DailyDataset, compute_reward
+from polymarket.dataset import DailyDataset
 
 
 class PolymarketDailyEnv(gym.Env):
@@ -22,10 +23,10 @@ class PolymarketDailyEnv(gym.Env):
         self.current_day = None
         self.positions_today = 0
 
-        # Observation: price, days_to_expiry, volume, n_outcomes, rank, slippage, risk, balance
+        # Observation: price, days_to_expiry, volume, n_outcomes, rank, slippage, risk, liquidity, balance
         self.observation_space = gym.spaces.Box(
-            low=np.array([0, 0, 0, 2, 1, 0, 0, 0], dtype=np.float32),
-            high=np.array([1, 30, 1e9, 50, 10, 0.2, 1, 1000], dtype=np.float32),
+            low=np.array([0, 0, 0, 2, 1, 0, 0, 0, 0], dtype=np.float32),
+            high=np.array([1, 30, 1e9, 50, 10, 0.2, 1, 1, 1000], dtype=np.float32),
         )
 
         # Action: 0 = skip, 1 = buy
@@ -42,6 +43,7 @@ class PolymarketDailyEnv(gym.Env):
                 float(sample.rank_by_price),
                 float(sample.slippage),
                 float(sample.risk_score),
+                float(sample.liquidity_score),
                 float(self.balance),
             ],
             dtype=np.float32,
@@ -72,9 +74,15 @@ class PolymarketDailyEnv(gym.Env):
             if self.positions_today >= self.config.max_positions_per_day:
                 reward = self.config.overtrade_penalty
             else:
-                daily_reward = compute_reward(sample, self.config)
-                self.balance *= max(1.0 + daily_reward, 0.0)
-                reward = daily_reward
+                ret = daily_return(
+                    sample.price,
+                    sample.next_price,
+                    self.config.fee_rate,
+                    sample.slippage,
+                )
+                position_frac = position_fraction(sample.liquidity_score, self.config.max_position_fraction)
+                self.balance *= max(1.0 + ret * position_frac, 0.0)
+                reward = reward_from_return(ret, sample.risk_score, self.config.risk_weight) * position_frac
                 self.positions_today += 1
 
         self.index += 1

@@ -18,6 +18,7 @@ class DataConfig:
     max_positions_per_day: int = 3
     skip_penalty: float = 0.0
     overtrade_penalty: float = -0.01
+    max_position_fraction: float = 0.95
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,7 @@ from typing import List
 
 import numpy as np
 
-from polymarket.calculations import daily_return, reward_from_return, risk_score
+from polymarket.calculations import daily_return, position_fraction, reward_from_return, risk_score
 from polymarket.config import DataConfig
 from polymarket.dataset import build_daily_frame
 
@@ -48,6 +48,8 @@ def backtest(config: DataConfig) -> BacktestResult:
         ),
         axis=1,
     )
+    if "liquidity_score" not in df.columns:
+        df["liquidity_score"] = 0.0
 
     df = df[
         (df["expected_return"] >= config.min_expected_return)
@@ -74,7 +76,9 @@ def backtest(config: DataConfig) -> BacktestResult:
         for _, row in picks.iterrows():
             ret = float(row["expected_return"])
             risk = float(row["risk_score"])
-            reward = reward_from_return(ret, risk, config.risk_weight)
+            liquidity = float(row.get("liquidity_score", 0.0))
+            position_frac = position_fraction(liquidity, config.max_position_fraction)
+            reward = reward_from_return(ret, risk, config.risk_weight) * position_frac
             daily_returns.append(reward)
             trades += 1
             if ret > 0:

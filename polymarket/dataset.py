@@ -6,7 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 
-from polymarket.calculations import daily_return, estimate_slippage, risk_score
+from polymarket.calculations import daily_return, estimate_slippage, liquidity_score, risk_score
 from polymarket.config import DataConfig
 
 
@@ -25,6 +25,7 @@ class DailySample:
     rank_by_price: int
     slippage: float
     risk_score: float
+    liquidity_score: float
 
 
 class DailyDataset:
@@ -61,7 +62,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     ]
 
     if df.empty:
-        return DailyDataset([]), np.zeros((0, 7), dtype=np.float32)
+        return DailyDataset([]), np.zeros((0, 8), dtype=np.float32)
 
     daily = (
         df.groupby(["market_id", "token_id", "day_index"])\
@@ -102,6 +103,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
         ),
         axis=1,
     )
+    daily["liquidity_score"] = daily["volume_num"].apply(liquidity_score)
 
     daily = daily[
         (daily["expected_return"] >= config.min_expected_return)
@@ -109,7 +111,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     ]
 
     if daily.empty:
-        return DailyDataset([]), np.zeros((0, 7), dtype=np.float32)
+        return DailyDataset([]), np.zeros((0, 8), dtype=np.float32)
 
     samples: List[DailySample] = []
     obs_rows: List[np.ndarray] = []
@@ -130,6 +132,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                 rank_by_price=int(row["rank_by_price"]),
                 slippage=float(row["slippage"]),
                 risk_score=float(row["risk_score"]),
+                liquidity_score=float(row["liquidity_score"]),
             )
         )
         obs_rows.append(
@@ -142,6 +145,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                     float(row["rank_by_price"]),
                     float(row["slippage"]),
                     float(row["risk_score"]),
+                    float(row["liquidity_score"]),
                 ],
                 dtype=np.float32,
             )
@@ -170,6 +174,7 @@ def build_daily_frame(config: DataConfig) -> pd.DataFrame:
                 "rank_by_price": sample.rank_by_price,
                 "slippage": sample.slippage,
                 "risk_score": sample.risk_score,
+                "liquidity_score": sample.liquidity_score,
             }
         )
     return pd.DataFrame(records)
