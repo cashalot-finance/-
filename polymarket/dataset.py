@@ -6,6 +6,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 
+from polymarket.calculations import estimate_slippage, risk_score
 from polymarket.config import DataConfig
 
 
@@ -22,6 +23,8 @@ class DailySample:
     n_outcomes: int
     is_winner_token: int
     rank_by_price: int
+    slippage: float
+    risk_score: float
 
 
 class DailyDataset:
@@ -64,7 +67,7 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     ]
 
     if df.empty:
-        return DailyDataset([]), np.zeros((0, 5), dtype=np.float32)
+        return DailyDataset([]), np.zeros((0, 7), dtype=np.float32)
 
     daily = (
         df.groupby(["market_id", "token_id", "day_index"])\
@@ -92,6 +95,10 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
     )
 
     daily = daily[daily["rank_by_price"] <= config.top_k_by_price]
+    daily["slippage"] = daily["volume_num"].apply(lambda v: estimate_slippage(v, config.slippage_cap))
+    daily["risk_score"] = daily.apply(
+        lambda r: risk_score(float(r["price"]), int(r["days_to_expiry"])), axis=1
+    )
 
     samples: List[DailySample] = []
     obs_rows: List[np.ndarray] = []
@@ -110,6 +117,8 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                 n_outcomes=int(row["n_outcomes"]),
                 is_winner_token=int(row["is_winner_token"]),
                 rank_by_price=int(row["rank_by_price"]),
+                slippage=float(row["slippage"]),
+                risk_score=float(row["risk_score"]),
             )
         )
         obs_rows.append(
@@ -120,6 +129,8 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
                     float(row["volume_num"]),
                     float(row["n_outcomes"]),
                     float(row["rank_by_price"]),
+                    float(row["slippage"]),
+                    float(row["risk_score"]),
                 ],
                 dtype=np.float32,
             )
@@ -129,10 +140,10 @@ def load_daily_dataset(config: DataConfig) -> Tuple[DailyDataset, np.ndarray]:
 
 
 def compute_reward(sample: DailySample, config: DataConfig) -> float:
-    slippage = _slippage_from_volume(sample.volume_num, config.slippage_cap)
-    effective_buy = sample.price * (1.0 + slippage)
-    effective_sell = sample.next_price * (1.0 - slippage)
+    slippage = estimate_slippage(sample.volume_num, config.slippage_cap)
+    effective_buy = sample.price * (1.0 + slippage + config.fee_rate)
+    effective_sell = sample.next_price * (1.0 - slippage - config.fee_rate)
     raw_return = (effective_sell - effective_buy) / max(effective_buy, 1e-8)
 
-    risk_penalty = (1.0 - sample.price)
-    return float(raw_return - 0.5 * risk_penalty)
+    risk = risk_score(sample.price, sample.days_to_expiry)
+    return float(np.log1p(np.clip(raw_return, -0.99, 10.0)) - config.risk_weight * risk)

@@ -28,7 +28,10 @@ def main() -> None:
     model = PPO.load(args.model)
 
     balance_feature = np.full((obs.shape[0], 1), 1.0, dtype=np.float32)
-    obs_with_balance = np.hstack([obs, balance_feature]) if obs.size else obs
+    if obs.size:
+        obs_with_balance = np.hstack([obs, balance_feature])
+    else:
+        obs_with_balance = obs
 
     actions, _ = model.predict(obs_with_balance, deterministic=True)
     scores = []

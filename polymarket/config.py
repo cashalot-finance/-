@@ -11,6 +11,8 @@ class DataConfig:
     slippage_cap: float = 0.01
     min_price: float = 0.9
     max_price: float = 0.999
+    fee_rate: float = 0.0015
+    risk_weight: float = 0.6
 
 
 @dataclass(frozen=True)
